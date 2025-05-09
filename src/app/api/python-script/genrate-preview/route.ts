@@ -3,6 +3,7 @@ import util from 'util';
 import { NextResponse } from 'next/server';
 import path from 'path';
 import { z } from 'zod';
+import os from 'os';
 import { codeConst, CreateFile, CreateFolder } from '@/utils/functions/fileIO';
 import { generateUUID } from 'three/src/math/MathUtils.js';
 
@@ -16,13 +17,18 @@ const bodySchema = z.object({
 export async function POST(request: Request) {
   const body = await request.json();
   const { code } = bodySchema.parse(body);
-  const uniqueKey = generateUUID()
-  const uniqueFolder = path.join(process.cwd(), uniqueKey)
-  CreateFolder(uniqueFolder);
-  const scriptFolder = path.join(uniqueFolder, 'scripts')
-  CreateFolder(scriptFolder);
-  const scriptPath = path.join(scriptFolder, 'genrate_model.py');
-  await CreateFile(scriptPath, code + "\n" + codeConst)
+  // Generate a writable path in /tmp
+const uniqueKey = generateUUID();
+const baseTempDir = os.tmpdir(); // returns "/tmp"
+const uniqueFolder = path.join(baseTempDir, uniqueKey);
+
+CreateFolder(uniqueFolder);
+
+const scriptFolder = path.join(uniqueFolder, 'scripts');
+CreateFolder(scriptFolder);
+
+const scriptPath = path.join(scriptFolder, 'genrate_model.py');
+await CreateFile(scriptPath, code + "\n" + codeConst);
   try {
     const { stdout, stderr } = await execPromise(`python3 ${scriptPath}`);
 
